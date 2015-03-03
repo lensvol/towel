@@ -1,0 +1,2 @@
+class TowelError(Exception):
+    pass

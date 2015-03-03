@@ -1,0 +1,3 @@
+<towel>
+    <request method="get" result="test1.out" url="/v2/images" />
+</towel>
