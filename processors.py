@@ -1,19 +1,23 @@
 import collections
 import json
+from lxml import etree, html
 
 import exc
 
 
 class TextProcessor(object):
     """a class to process returned text based on content-type"""
-    def __init__(self, content_type):
+    def __init__(self, content_type="text/html"):
         self.content_type = content_type
 
     def process(self, text):
-        raise NotImplementedError()
-
-    def normalize(self, data):
-        return data
+        """
+        Transferes text from response to a text in normalized form.
+        The output is required to be comparable line-by-line by diff.
+        """
+        doc_root = html.fromstring(text)
+        return etree.tostring(doc_root, encoding='unicode',
+                              pretty_print=True)
 
 
 class JsonTextProcessor(TextProcessor):
@@ -26,7 +30,7 @@ class JsonTextProcessor(TextProcessor):
             normalized = self.normalize(data)
             return json.dumps(normalized)
         except:
-            raise exc.TowelError("Not a valid JSON")
+            raise exc.BadTextData("Not a valid JSON")
 
     def normalize(self, data):
         if isinstance(data, dict):
@@ -38,10 +42,12 @@ class JsonTextProcessor(TextProcessor):
 
 
 class TextProcessorFactory(object):
-    _map = {'application/json': JsonTextProcessor}
+    _map = {'application/json': JsonTextProcessor,
+            'text/html': TextProcessor}
 
     def get(self, type):
         try:
             return self._map[type]()
-        except:
-            raise exc.TowelError("Content-Type '%s' not supported")
+        except KeyError as e:
+            raise exc.TowelError("Content-Type '%s' not supported" %
+                                 e.message)
