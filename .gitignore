@@ -4,3 +4,4 @@
 .ropeproject
 *.tmp
 *.out
+*.in

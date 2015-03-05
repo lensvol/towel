@@ -28,7 +28,11 @@ class Request(object):
             raise TowelError("Invalid method %s" % type)
         self.url = url
         # for PUT and POST requests ->
-        self.request_data = kwargs.get("request-data")
+        self.request_data = None
+        request_file = kwargs.get("request-data")
+        if request_file:
+            with open(request_file) as f:
+                self.request_data = f.read()
         self.request_content_type = kwargs.get("request-content-type",
                                                "application/json")
         self.args = dict(kwargs)
@@ -38,6 +42,12 @@ class Request(object):
 
     def _get(self):
         res = requests.get(self.url)
+        c_type = res.headers["content-type"]
+        return (res.status_code, res.text, c_type.lower())
+
+    def _post(self):
+        res = requests.post(self.url, data=self.request_data,
+                            headers={'Content-Type': self.request_content_type})
         c_type = res.headers["content-type"]
         return (res.status_code, res.text, c_type.lower())
 
