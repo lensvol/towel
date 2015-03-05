@@ -10,8 +10,8 @@ from parser import TowelProcessor
 towel run 'some_dir'
 
 Looks for towel.xml in 'some_dir', then runs towel tests one by one.
-If the response file for a test exists, then compares the result it got with the
-saved response from a file.
+If the response file for a test exists, then the actual result is compared with
+the saved response (stored in a file).
 If the comparison fails for some reason or no previous response has been recorded,
 then 'expected-response-file'.tmp will be created where the actual response will
 be stored.

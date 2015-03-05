@@ -1,0 +1,10 @@
+<towel>
+    <request method="setup" request-data="setup.sh"/>
+    <request method="get" result="test1.out" url="/v2/artifacts/myartifact"
+        content-type="application/json"/>
+    <request method="get" result="test2.out" url="/v2/artifacts/nosuchplugin" status="400" />
+    <request method="post" result="test3.out" url="/v2/artifacts/myartifact/creating" status="400" request-data="test3.in"/>
+    <request method="post" result="test4.out" url="/v2/artifacts/myartifact/creating" status="201" request-data="test4.in" content-type="application/json"/>
+    <request method="get" result="test5.out" url="/v2/artifacts/myartifact/creating" content-type="application/json"/>
+    <request method="setup" request-data="clean.sh"/>
+</towel>

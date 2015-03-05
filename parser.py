@@ -10,6 +10,7 @@ import urlparse
 
 from lxml import etree
 
+import exc
 import processors
 
 
@@ -23,15 +24,17 @@ LOG.addHandler(ch)
 
 class Request(object):
     def __init__(self, type, url, **kwargs):
+        self.test_dir = kwargs.get("test_dir", "towel-tests")
         self.type = type.lower()
-        if self.type not in ["get", "post", "put"]:
-            raise TowelError("Invalid method %s" % type)
+        self.is_system = self.type == "setup"
+        if self.type not in ["get", "post", "setup"]:
+            raise exc.TowelError("Invalid method %s" % type)
         self.url = url
         # for PUT and POST requests ->
         self.request_data = None
-        request_file = kwargs.get("request-data")
-        if request_file:
-            with open(request_file) as f:
+        self.request_file = kwargs.get("request-data")
+        if self.request_file:
+            with open(os.path.join(self.test_dir, self.request_file)) as f:
                 self.request_data = f.read()
         self.request_content_type = kwargs.get("request-content-type",
                                                "application/json")
@@ -50,6 +53,25 @@ class Request(object):
                             headers={'Content-Type': self.request_content_type})
         c_type = res.headers["content-type"]
         return (res.status_code, res.text, c_type.lower())
+
+    def _setup(self):
+        """
+        A special endpoint to execute custom logic.
+        The logic is stored in request-data file
+        """
+        # if no file with rules is given, perform nothing
+        if not self.request_data:
+            LOG.warn("No file given in setup call, ignoring it.")
+            return
+        xterm = ["xterm", "-e", "bash",
+                 os.path.join(self.test_dir, self.request_file)]
+        # FIXME Oh my, that's awful, time for bloody tears
+        import subprocess
+        import time
+        proc = subprocess.Popen(xterm)
+        time.sleep(5)
+        if proc.poll() != 0:
+            time.sleep(35)
 
 
 class TowelProcessor(object):
@@ -73,6 +95,7 @@ class TowelProcessor(object):
         # FIXME let's make it a blunt way at first, later some validation
         # against towel.xml may be added
         for f in os.listdir(self.test_dir):
+            f = os.path.join(self.test_dir, f)
             if f.endswith(self.TOWEL_TMP_SUFFIX):
                 os.rename(f, f[0:-4])
 
@@ -87,14 +110,21 @@ class TowelProcessor(object):
             other_args = dict((k, v) for (k, v) in r_data.items()
                               if k not in ["method", "url", "result"])
             result = r_data.get("result")
+            if result:
+                result = os.path.join(self.test_dir, result)
             content_type_exp = other_args.get("content-type",
                                               self.default_content_type)
             status_exp = int(other_args.get("status", self.default_status))
             request = Request(type=r_data.get("method"),
                               url=urlparse.urljoin(self.server,
                                                    r_data.get("url")),
+                              test_dir=self.test_dir,
                               **other_args)
-            status, data, content_type = request.send()
+            data = request.send()
+            if request.is_system:
+                # nothing to do here
+                continue
+            status, data, content_type = data
             # FIXME think of a better way to compare
             # 'application/json; charset=utf-8' and 'application/json'
             content_type = content_type.split(';')[0]

@@ -1,7 +1,0 @@
-<towel>
-    <request method="get" result="test1.out" url="/v2/images"
-        content-type="application/json"/>
-    <request method="get" result="test2.out" url="/v2/nosuchurl" status="404" />
-    <request method="post" result="test3.out" url="/v2/images" status="201" 
-        request-data="test3.in" content-type="application/json"/>
-</towel>
