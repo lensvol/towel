@@ -24,6 +24,10 @@ Glance Artifacts Server
 import os
 import sys
 
+# monkey patches all unstable things like datetime and id generation
+import immutables
+immutables.perform_monkey_patch()
+
 import eventlet
 
 from glance.common import utils
@@ -48,6 +52,7 @@ from glance.common import exception
 from glance.common import wsgi
 from glance.openstack.common import log
 
+
 CONF = cfg.CONF
 
 
@@ -58,11 +63,7 @@ def fail(returncode, e):
 
 def main(*args, **kwargs):
     try:
-        import immutables
-        immutables.perform_monkey_patch()
-        config_default = (args[1] if len(args) > 1
-                          else 'etc/glance-artifacts.conf')
-        config.parse_args(default_config_files=[config_default])
+        config.parse_args()
         wsgi.set_eventlet_hub()
         log.setup('glance')
 

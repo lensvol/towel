@@ -5,6 +5,7 @@ import difflib
 import logging
 import os
 import requests
+import subprocess
 import sys
 import urlparse
 
@@ -56,8 +57,7 @@ class Request(object):
 
     def _setup(self):
         """
-        A special endpoint to execute custom logic.
-        The logic is stored in request-data file
+        A special endpoint to execute custom logic stored in request-data file
         """
         # if no file with rules is given, perform nothing
         if not self.request_data:
@@ -65,13 +65,7 @@ class Request(object):
             return
         xterm = ["xterm", "-e", "bash",
                  os.path.join(self.test_dir, self.request_file)]
-        # FIXME Oh my, that's awful, time for bloody tears
-        import subprocess
-        import time
-        proc = subprocess.Popen(xterm)
-        time.sleep(5)
-        if proc.poll() != 0:
-            time.sleep(35)
+        subprocess.call(xterm)
 
 
 class TowelProcessor(object):
@@ -104,8 +98,8 @@ class TowelProcessor(object):
         if not os.path.exists(self.filename):
             LOG.warn("No %s found, ignoring run command" % self.TOWEL_TEST_FILE)
         tree = etree.parse(self.filename)
-        for i, r_data in enumerate(tree.xpath("request"), 1):
-            LOG.info("-----Running test %d-----" % i)
+        i = 0
+        for r_data in tree.xpath("request"):
             error = None
             other_args = dict((k, v) for (k, v) in r_data.items()
                               if k not in ["method", "url", "result"])
@@ -120,11 +114,14 @@ class TowelProcessor(object):
                                                    r_data.get("url")),
                               test_dir=self.test_dir,
                               **other_args)
-            data = request.send()
             if request.is_system:
-                # nothing to do here
+                self._print_run_data("Running setup script '%s'" %
+                                     request.request_file)
+                request.send()
                 continue
-            status, data, content_type = data
+            i += 1
+            self._print_run_data("Running test %d" % i)
+            status, data, content_type = request.send()
             # FIXME think of a better way to compare
             # 'application/json; charset=utf-8' and 'application/json'
             content_type = content_type.split(';')[0]
@@ -137,6 +134,8 @@ class TowelProcessor(object):
                                                               content_type)
             if error:
                 self._print_fail(error)
+                # log received result -> do not save in a file.out.tmp
+                self._print_fail("Actual response (won't be saved)", data)
                 continue
             processor = self.proc_factory.get(content_type_exp)
             try:
@@ -155,6 +154,9 @@ class TowelProcessor(object):
             else:
                 self._print_ok()
 
+    def _print_run_data(self, data):
+        LOG.info("-----%s-----" % data)
+
     def _print_fail(self, reason, info=""):
         LOG.info("FAIL: %s\n%s" % (reason, info))
 
@@ -169,7 +171,7 @@ class TowelProcessor(object):
                              if isinstance(data[k], dict) else data[k])
             return result
 
-    def _compare(self, expected, actual, filename):
+    def _compare (self, expected, actual, filename):
         """
         Perform comparison and returns (bool success, str diff).
         'Success' is a flag indicating if expected == actual, 'diff'

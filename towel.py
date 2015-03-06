@@ -3,18 +3,19 @@ import argparse
 import os
 import sys
 
-from parser import TowelProcessor
+from runner import TowelProcessor
 
 
 """
 towel run 'some_dir'
 
 Looks for towel.xml in 'some_dir', then runs towel tests one by one.
-If the response file for a test exists, then the actual result is compared with
-the saved response (stored in a file).
-If the comparison fails for some reason or no previous response has been recorded,
-then 'expected-response-file'.tmp will be created where the actual response will
-be stored.
+If the response file for a test exists, then the actual result is compared
+with the saved response (stored in a file).
+
+If the comparison fails for some reason or no previous response has been
+recorded, then 'expected-response-file'.tmp will be created where the actual
+response will be stored.
 
 
 towel fixate 'some_dir'

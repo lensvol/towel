@@ -7,4 +7,4 @@ TEST_DB=/tmp/tests.sqlite
 rm -rf "$TEST_DB"
 
 # FIXME damn damn bad, have to find a way to kill PRECISELY the server launched
-kill -TERM -$(pgrep -f artifacts)
+kill -INT -$(pgrep -f artifacts)
