@@ -28,7 +28,7 @@ class JsonTextProcessor(TextProcessor):
         try:
             data = json.loads(text)
             normalized = self.normalize(data)
-            return json.dumps(normalized)
+            return json.dumps(normalized, indent=2)
         except:
             raise exc.BadTextData("Not a valid JSON")
 
@@ -39,6 +39,9 @@ class JsonTextProcessor(TextProcessor):
                 result[k] = (self._normalize(data[k])
                              if isinstance(data[k], dict) else data[k])
             return result
+        else:
+            # for other non-dict valid json values (like lists)
+            return data
 
 
 class TextProcessorFactory(object):
