@@ -20,13 +20,13 @@
 """
 Glance Artifacts Server
 """
+# monkey patches all unstable things like datetime and id generation
+import immutables
+immutables.perform_monkey_patch()
 
 import os
 import sys
 
-# monkey patches all unstable things like datetime and id generation
-import immutables
-immutables.perform_monkey_patch()
 
 import eventlet
 

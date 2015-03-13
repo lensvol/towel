@@ -5,7 +5,9 @@ attempt to receive a fixed diff-comparable representation
 
 import datetime
 import importlib
-import random
+
+
+LOG_FILE = "log.file"
 
 
 def time_generator():
@@ -13,18 +15,25 @@ def time_generator():
     TIME_DELTA = 42
     last = TIME_SEED
     while True:
-        yield (datetime.datetime.fromtimestamp(0) +
-               datetime.timedelta(seconds=last))
         last += TIME_DELTA
+        date = (datetime.datetime.fromtimestamp(0) +
+                datetime.timedelta(seconds=last))
+        with open(LOG_FILE, "a+") as f:
+            f.write(str(date) + "\n")
+        yield date
 
 
 def id_generator():
     ID_SEED = 42
+    import random
     random.seed(ID_SEED)
     from uuid import UUID
     while True:
         bytes = [chr(random.randrange(256)) for i in range(16)]
-        yield UUID(bytes=bytes, version=4)
+        last = UUID(bytes=bytes, version=4)
+        with open(LOG_FILE, "a+") as f:
+            f.write(str(last) + "\n")
+        yield last
 
 
 TIME_GENERATOR = time_generator()
@@ -37,6 +46,9 @@ _restore_map = {}
 
 
 def perform_monkey_patch():
+    import os
+    if os.path.exists(LOG_FILE):
+        os.remove(LOG_FILE)
     for str_func in _monkey_map:
         mod_parts = str_func.split('.')
         module = importlib.import_module('.'.join(mod_parts[:-1]))

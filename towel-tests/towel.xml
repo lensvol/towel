@@ -1,14 +1,7 @@
 <towel>
     <request method="setup" request-data="setup.sh"/>
-    <request method="get" result="test1.out" url="/v2/artifacts/myartifact"
-        content-type="application/json"/>
-    <request method="get" result="test2.out" url="/v2/artifacts/nosuchplugin" status="400" />
-    <request method="post" result="test3.out" url="/v2/artifacts/myartifact/creating" status="400" request-data="test3.in"/>
-    <request method="post" result="test4.out" url="/v2/artifacts/myartifact/creating" status="201" request-data="test4.in" content-type="application/json"/>
-    <request method="get" result="test5.out" url="/v2/artifacts/myartifact/6e7fe001-0647-4709-9c14-9195d93a9000" content-type="application/json"/>
-    <request method="get" result="test6.out" url="/v2/artifacts/myartifact/v1.1/6e7fe001-0647-4709-9c14-9195d93a9000" status="400"/>
-    <request method="post" result="test7.out" url="/v2/artifacts/myartifact/creating" status="201" request-data="test7.in" content-type="application/json"/>
-    <request method="get" result="test8.out" url="/v2/artifacts/myartifact/v1.1/6e7fe001-0647-4709-9c14-9195d93a9000" status="400"/>
-    <request method="get" result="test9.out" url="/v2/artifacts/myartifact/v2.0/12a13ae7-dc12-4cab-b621-ef9279c8ce30" content-type="application/json"/>
+    <request method="post" result="test7.out" url="/v2/artifacts/myartifact/v2.0/drafts" status="201" request-data="test7.in" content-type="application/json"/>
+    <request method="post" result="test9.out" url="/v2/artifacts/myartifact/v2.0/drafts" status="201" request-data="test7.in" content-type="application/json"/>
+    <request method="get" result="test10.out" url="/v2/artifacts/myartifact/v2.0/drafts" content-type="application/json"/>
     <request method="setup" request-data="clean.sh"/>
 </towel>

@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 
-import collections
 import difflib
 import logging
 import os
@@ -24,25 +23,32 @@ LOG.addHandler(ch)
 
 
 class Request(object):
-    def __init__(self, type, url, **kwargs):
+    TYPES = ["get", "post", "setup"]
+
+    def __init__(self, **kwargs):
         self.test_dir = kwargs.get("test_dir", "towel-tests")
-        self.type = type.lower()
-        self.is_system = self.type == "setup"
-        if self.type not in ["get", "post", "setup"]:
-            raise exc.TowelError("Invalid method %s" % type)
-        self.url = url
+        self.method = kwargs["method"].lower()
+        if self.method not in Request.TYPES:
+            raise exc.TowelError("Invalid method %s" % self.method)
+        self.url = kwargs.get("url")
+        self.help_str = kwargs.get("help")
+        self.result_file = kwargs.get("result")
         # for PUT and POST requests ->
         self.request_data = None
         self.request_file = kwargs.get("request-data")
         if self.request_file:
-            with open(os.path.join(self.test_dir, self.request_file)) as f:
+            with open(self.request_file) as f:
                 self.request_data = f.read()
         self.request_content_type = kwargs.get("request-content-type",
                                                "application/json")
         self.args = dict(kwargs)
 
+    @property
+    def is_system(self):
+        return self.method == "setup"
+
     def send(self):
-        return getattr(self, "_" + self.type)()
+        return getattr(self, "_" + self.method)()
 
     def _get(self):
         res = requests.get(self.url)
@@ -63,9 +69,12 @@ class Request(object):
         if not self.request_data:
             LOG.warn("No file given in setup call, ignoring it.")
             return
-        xterm = ["xterm", "-e", "bash",
-                 os.path.join(self.test_dir, self.request_file)]
+        xterm = ["xterm", "-e", "bash", self.request_file]
         subprocess.call(xterm)
+
+    def __str__(self):
+        return ("Setup script <%s>" % self.request_file if self.is_system
+                else "Testcase <%s>" % (self.help_str or self.result_file))
 
 
 class TowelProcessor(object):
@@ -93,6 +102,22 @@ class TowelProcessor(object):
             f = os.path.join(self.test_dir, f)
             os.rename(f, f[0:-4])
 
+    def _fix_relative(self, req_data):
+        """
+        Returns a dictionary containing absolute urls/file paths
+        as well as other, non changed, request data
+        """
+        result = dict(req_data.items())
+        relative_file_keys = ["result", "request-data"]
+        relative_url_keys = ["url"]
+        for k in relative_file_keys:
+            if k in result:
+                result[k] = os.path.join(self.test_dir, result[k])
+        for k in relative_url_keys:
+            if k in result:
+                result[k] = urlparse.urljoin(self.server, result[k])
+        return result
+
     def run(self):
         # check for file existance
         if not os.path.exists(self.filename):
@@ -100,26 +125,18 @@ class TowelProcessor(object):
         tree = etree.parse(self.filename)
         test_num = 0
         for r_data in tree.xpath("request"):
-            other_args = dict((k, v) for (k, v) in r_data.items()
-                              if k not in ["method", "url", "result"])
+            r_data = self._fix_relative(r_data)
             result_filename = r_data.get("result")
-            if result_filename:
-                result_filename = os.path.join(self.test_dir, result_filename)
-            content_type_exp = other_args.get("content-type",
-                                              self.default_content_type)
-            status_exp = int(other_args.get("status", self.default_status))
-            request = Request(type=r_data.get("method"),
-                              url=urlparse.urljoin(self.server,
-                                                   r_data.get("url")),
-                              test_dir=self.test_dir,
-                              **other_args)
+            content_type_exp = r_data.get("content-type",
+                                          self.default_content_type)
+            status_exp = int(r_data.get("status", self.default_status))
+            request = Request(test_dir=self.test_dir, **r_data)
             if request.is_system:
-                self._print_run_data("Running setup script '%s'" %
-                                     request.request_file)
+                self._print_run_data("Running %s" % request)
                 request.send()
                 continue
             test_num += 1
-            self._print_run_data("Running test %d" % test_num)
+            self._print_run_data("Running %s #%d" % (request, test_num))
             status, data, content_type = request.send()
             # FIXME think of a better way to compare
             # 'application/json; charset=utf-8' and 'application/json'

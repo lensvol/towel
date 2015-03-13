@@ -1,0 +1,22 @@
+<towel>
+    <request method="setup" request-data="setup.sh"/>
+    <request method="get" result="test1.out" url="/v2/artifacts/myartifact"
+        content-type="application/json"/>
+    <request method="get" result="test2.out" url="/v2/artifacts/nosuchplugin" status="400" />
+    <!--can't create an artifact with just 'name', no 'version'-->
+    <request method="post" result="test3.out" url="/v2/artifacts/myartifact/v2.0/drafts" status="400" request-data="test3.in"/>
+    <!--can't create an artifact without specifying type version-->
+    <request method="post" result="test4.out" url="/v2/artifacts/myartifact/drafts" status="404" request-data="test4.in"
+        help="can't create an artifact via POST without type_version"/>
+    <request method="post" result="test4_1.out" url="/v2/artifacts/myartifact/v2.0/drafts" status="201" request-data="test4.in" content-type="application/json"
+        help="successful artifact creation"/>
+        <request method="get" result="test5.out" url="/v2/artifacts/myartifact/1f721b25-7048-4a3a-aaaa-2240658a0ec2" content-type="application/json"
+        help="successful artifact retrieval"/>
+    <!--can't access via wrong type_version-->
+    <request method="get" result="test6.out" url="/v2/artifacts/myartifact/v1.1/1f721b25-7048-4a3a-aaaa-2240658a0ec2" status="400" 
+        help="won't fetch if bad type_version provided"/>
+    <request method="get" result="test6_1.out" url="/v2/artifacts/myartifact/v2.0/1f721b25-7048-4a3a-aaaa-2240658a0ec2" help="fetch ok" content-type="application/json"/>
+    <request method="post" result="test7.out" url="/v2/artifacts/myartifact/v2.0/drafts" status="201" request-data="test7.in" content-type="application/json"/>
+    <request method="get" result="test8.out" url="/v2/artifacts/myartifact/v2.0/drafts" content-type="application/json"/>
+    <request method="setup" request-data="clean.sh"/>
+</towel>
