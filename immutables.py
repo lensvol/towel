@@ -5,9 +5,10 @@ attempt to receive a fixed diff-comparable representation
 
 import datetime
 import importlib
-
-
-LOG_FILE = "log.file"
+import random
+import requests
+import urlparse
+import uuid
 
 
 def time_generator():
@@ -16,45 +17,64 @@ def time_generator():
     last = TIME_SEED
     while True:
         last += TIME_DELTA
-        date = (datetime.datetime.fromtimestamp(0) +
-                datetime.timedelta(seconds=last))
-        with open(LOG_FILE, "a+") as f:
-            f.write(str(date) + "\n")
-        yield date
+        yield last
 
 
 def id_generator():
     ID_SEED = 42
-    import random
     random.seed(ID_SEED)
-    from uuid import UUID
     while True:
         bytes = [chr(random.randrange(256)) for i in range(16)]
-        last = UUID(bytes=bytes, version=4)
-        with open(LOG_FILE, "a+") as f:
-            f.write(str(last) + "\n")
+        last = uuid.UUID(bytes=bytes, version=4)
         yield last
 
 
 TIME_GENERATOR = time_generator()
 ID_GENERATOR = id_generator()
 
-_monkey_map = {"oslo_utils.timeutils.utcnow": TIME_GENERATOR.next,
-               "uuid.uuid4": ID_GENERATOR.next}
+
+def _time_from_seconds(seconds_str):
+    seconds = int(seconds_str)
+    return (datetime.datetime.fromtimestamp(0) +
+            datetime.timedelta(seconds=seconds))
+
+
+_monkey_map = {"oslo_utils.timeutils.utcnow": (TIME_GENERATOR.next,
+                                               _time_from_seconds),
+               "uuid.uuid4": (ID_GENERATOR.next, uuid.UUID)}
+
+REPLACE_MODULES = {k.split('.')[-1]: v[0] for (k, v)
+                   in _monkey_map.iteritems()}
+POSTFETCH_HANDLERS = {k: v[1] for (k, v)
+                      in _monkey_map.iteritems()}
 
 _restore_map = {}
 
 
-def perform_monkey_patch():
-    import os
-    if os.path.exists(LOG_FILE):
-        os.remove(LOG_FILE)
+def perform_monkey_patch(server_url="http://127.0.0.1:8029"):
+    """
+    Each method instead of calling a mocked version performs a GET
+    to the Mock Server.
+    It has to be done in spite of eventlet-based nature of glance's services start.
+    """
+    class MockCall(object):
+        def __init__(self, endpoint, proc_func):
+            self.endpoint = endpoint
+            self.proc_func = proc_func
+
+        def __call__(self):
+            data = requests.get(self.endpoint)
+            return self.proc_func(data.text)
+
+
     for str_func in _monkey_map:
         mod_parts = str_func.split('.')
         module = importlib.import_module('.'.join(mod_parts[:-1]))
         orig_func = getattr(module, mod_parts[-1])
         _restore_map[str_func] = orig_func
-        setattr(module, mod_parts[-1], _monkey_map[str_func])
+        func, proc_func = _monkey_map[str_func]
+        func_endpoint = urlparse.urljoin(server_url, mod_parts[-1])
+        setattr(module, mod_parts[-1], MockCall(func_endpoint, proc_func))
 
 
 def restore_after_monkey_patch():
