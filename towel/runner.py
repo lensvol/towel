@@ -1,18 +1,15 @@
 #! /usr/bin/env python
 
-import collections
 import difflib
 import logging
 import os
-import requests
 import subprocess
 import sys
 import urlparse
 
+import requests
 from lxml import etree
-
-import exc
-import processors
+from towel import processors, exc
 
 
 LOG = logging.getLogger("TowelProcessor")
@@ -84,7 +81,7 @@ class TowelProcessor(object):
 
     def fixate(self):
         """
-        Moves actual responses 'response.tmp' into 'response'
+        Moves actual responses 'response.tmp' into 'response'.
         """
         # FIXME let's make it a blunt way at first, later some validation
         # against towel.xml may be added

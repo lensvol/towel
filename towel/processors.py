@@ -1,8 +1,8 @@
 import collections
 import json
-from lxml import etree, html
 
-import exc
+from lxml import etree, html
+from towel import exc
 
 
 class TextProcessor(object):

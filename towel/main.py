@@ -1,9 +1,10 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
+
 import argparse
 import os
 import sys
 
-from runner import TowelProcessor
+from towel.runner import TowelProcessor
 
 
 """

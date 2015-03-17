@@ -25,7 +25,8 @@ import os
 import sys
 
 # monkey patches all unstable things like datetime and id generation
-import immutables
+from towel import immutables
+
 immutables.perform_monkey_patch()
 
 import eventlet
