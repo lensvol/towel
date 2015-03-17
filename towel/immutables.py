@@ -48,14 +48,13 @@ REPLACE_MODULES = {k.split('.')[-1]: v[0] for (k, v)
 POSTFETCH_HANDLERS = {k: v[1] for (k, v)
                       in _monkey_map.iteritems()}
 
-_restore_map = {}
 
-
-def perform_monkey_patch(server_url="http://127.0.0.1:8029"):
+def perform_monkey_patch(mock_server_url):
     """
     Each method instead of calling a mocked version performs a GET
     to the Mock Server.
-    It has to be done in spite of eventlet-based nature of glance's services start.
+    It has to be done in spite of eventlet-based nature of glance's services
+    start to guarantee fixed order od uuid generation and timestamps.
     """
     class MockCall(object):
         def __init__(self, endpoint, proc_func):
@@ -66,19 +65,9 @@ def perform_monkey_patch(server_url="http://127.0.0.1:8029"):
             data = requests.get(self.endpoint)
             return self.proc_func(data.text)
 
-
     for str_func in _monkey_map:
         mod_parts = str_func.split('.')
         module = importlib.import_module('.'.join(mod_parts[:-1]))
-        orig_func = getattr(module, mod_parts[-1])
-        _restore_map[str_func] = orig_func
         func, proc_func = _monkey_map[str_func]
-        func_endpoint = urlparse.urljoin(server_url, mod_parts[-1])
+        func_endpoint = urlparse.urljoin(mock_server_url, mod_parts[-1])
         setattr(module, mod_parts[-1], MockCall(func_endpoint, proc_func))
-
-
-def restore_after_monkey_patch():
-    for str_func in _restore_map:
-        mod_parts = str_func.split('.')
-        module = importlib.import_module('.'.join(mod_parts[:-1]))
-        setattr(module, mod_parts[-1], _restore_map[str_func])

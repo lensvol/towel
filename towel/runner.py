@@ -14,7 +14,7 @@ import exc
 import processors
 
 
-LOG = logging.getLogger("TowelProcessor")
+LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
 # add stdout handler to see progress
 ch = logging.StreamHandler(sys.stdout)

@@ -1,9 +1,12 @@
 #! /usr/bin/env python
 import argparse
 import os
+import subprocess
 import sys
 
-from runner import TowelProcessor
+from conf import TOWEL_CONF
+import exc
+import runner
 
 
 """
@@ -34,12 +37,24 @@ def main():
                         default='http://127.0.0.1')
     parser.add_argument('-p', '--port', type=int, default=9292)
     parsed = parser.parse_args(sys.argv[1:])
+    mock_server_enabled = TOWEL_CONF.get('mock_server', 'enabled')
+    # start Mock Server
+    if mock_server_enabled:
+        mock_server = subprocess.Popen(['python',
+                                        'towel/start_mock_server.py'])
     towel_dir = os.path.join(parsed.dirname)
-    if os.path.exists(towel_dir):
-        tp = TowelProcessor(towel_dir,
-                            server_address="%s:%d" % (parsed.address,
-                                                      parsed.port))
-        getattr(tp, parsed.command)()
+    try:
+        if os.path.exists(towel_dir):
+            tp = runner.TowelProcessor(
+                towel_dir,
+                server_address="%s:%d" % (parsed.address, parsed.port))
+            getattr(tp, parsed.command)()
+    except Exception as e:
+        raise exc.TowelError("An error has occured: %s" % e.message)
+    finally:
+        if mock_server_enabled:
+            # stop mock server
+            mock_server.kill()
 
 
 if __name__ == "__main__":

@@ -21,8 +21,9 @@
 Glance Artifacts Server
 """
 # monkey patches all unstable things like datetime and id generation
-import immutables
-immutables.perform_monkey_patch()
+from towel import conf
+from towel import immutables
+immutables.perform_monkey_patch(conf.get_mock_server_url())
 
 import os
 import sys
@@ -73,7 +74,7 @@ def main(*args, **kwargs):
 
         server = wsgi.Server()
         server.start(config.load_paste_app('glance-artifacts'),
-                     default_port=9999)
+                     default_port=9393)
         server.wait()
     except exception.WorkerCreationFailure as e:
         fail(2, e)

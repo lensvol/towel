@@ -4,3 +4,6 @@
 .ropeproject
 *.tmp
 *.out
+build
+dist
+*.egg-info
